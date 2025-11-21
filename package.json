@@ -1,0 +1,9 @@
+{
+  "name": "lpa-ai-server",
+  "version": "1.0.0",
+  "main": "api/chat.js",
+  "license": "MIT",
+  "dependencies": {
+    "openai": "latest"
+  }
+}
