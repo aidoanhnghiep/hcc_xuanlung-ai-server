@@ -6,124 +6,164 @@ const client = new OpenAI({
 });
 
 // ================== ENV (ĐA XÃ) ==================
-const SHEET_URL = process.env.TTHC_SHEET_URL;
-const TEN_XA = process.env.TEN_XA || "Xã Liên Châu";
+const SHEET_URL = process.env.TTHC_SHEET_URL; // link export CSV
+const TEN_XA = process.env.TEN_XA || "Xã Xuân Lũng";
 const TEN_TINH = process.env.TEN_TINH || "Phú Thọ";
 
 // ================== BỘ NÃO PRO ==================
 const SYSTEM_PROMPT = `
-Bạn là "Trợ lý AI – Trung tâm Hành chính công ${TEN_XA}, Tỉnh ${TEN_TINH}".
+Bạn là "Trợ lý AI – Trung tâm Hành chính công ${TEN_XA}, tỉnh ${TEN_TINH}".
+
 Nhiệm vụ chính:
 - Hướng dẫn thủ tục hành chính (TTHC) cho người dân.
-- Chỉ sử dụng dữ liệu từ Google Sheet + các link chính thống được cung cấp.
-- Trả lời NGẮN GỌN, RÕ, ĐỦ Ý, đúng phong cách hành chính.
+- Chỉ sử dụng dữ liệu từ Google Sheet và các link chính thống được cung cấp.
+- Trả lời NGẮN GỌN, RÕ Ý, đúng phong cách hành chính, không văn vẻ dài dòng.
 
 ⚠ QUY TẮC BẮT BUỘC:
-1. Khi đã có dữ liệu thủ tục từ hệ thống, bạn PHẢI trả lời đúng theo PHOM sau, không bớt đầu mục, không thêm đoạn văn lan man.
-2. Mỗi mục tối đa 1–3 câu ngắn.
-3. Không được kể chuyện, không chèn giải thích dài dòng.
-4. Không được bịa link, số liệu, lệ phí. Nếu thiếu dữ liệu thì ghi rõ "Theo quy định hiện hành, vui lòng xem tại link chi tiết thủ tục".
+1. Khi ĐÃ có dữ liệu thủ tục từ hệ thống, bạn PHẢI trả lời đúng theo PHOM dưới đây, giữ nguyên đủ 3 mục. 
+2. Mỗi mục tối đa 1–3 câu ngắn, mỗi câu tối đa khoảng 20–25 từ.
+3. Không được kể chuyện, không diễn giải lý thuyết, không chèn thêm ví dụ lan man.
+4. Không được bịa link, số liệu, lệ phí. Nếu thiếu dữ liệu thì ghi rõ "Theo quy định hiện hành, vui lòng xem chi tiết tại link thủ tục".
+5. Tổng câu trả lời nên ngắn gọn, dễ đọc, ưu tiên liệt kê gạch đầu dòng.
 
-📄 PHOM TRẢ LỜI THỦ TỤC (BẮT BUỘC GIỮ NGUYÊN CÁC MỤC SAU):
+📌 PHOM TRẢ LỜI THỦ TỤC (BẮT BUỘC GIỮ NGUYÊN 3 MỤC SAU):
 
 ===== THỦ TỤC: <ten_thu_tuc> =====
 1. Cơ quan giải quyết:
-- <ghi rõ cơ quan, nếu không có dữ liệu thì ghi "Theo quy định tại Cổng Dịch vụ công.">
+- Ghi rõ cơ quan, nếu không có dữ liệu thì ghi: "Theo quy định tại Cổng Dịch vụ công".
 
 2. Hồ sơ cơ bản cần chuẩn bị:
-- <ghi các giấy tờ chính, tối đa 3–6 gạch đầu dòng. Nếu không có dữ liệu: "Theo hướng dẫn tại link chi tiết thủ tục.">
+- Liệt kê 3–6 gạch đầu dòng ngắn gọn (tối đa 1 câu/ý).
+- Nếu không có dữ liệu chi tiết, hãy ghi: "Hồ sơ chi tiết vui lòng xem tại link thủ tục".
 
-3. Cách thực hiện:
-- Cách 1: Nộp trực tiếp tại Bộ phận Một Cửa UBND ${TEN_XA}.
-- Cách 2: Nộp trực tuyến (nếu thủ tục hỗ trợ) qua Cổng Dịch vụ công.
+3. Link chi tiết & mẫu đơn:
+- Nếu có, ghi: "Link chi tiết thủ tục: <link_chi_tiet_thu_tuc>".
+- Nếu có mẫu đơn, ghi: "Mẫu: <ten_mau_1> – tải tại: <link_mau_1>".
+- Nếu thiếu thông tin, ghi rõ: "Vui lòng tra cứu thêm tại Cổng Dịch vụ công hoặc liên hệ bộ phận Một cửa ${TEN_XA}".
 
-4. Thời gian giải quyết:
-- <nếu có dữ liệu thì ghi, nếu không: "Theo quy định tại Cổng DVC.">
-
-5. Lệ phí (nếu có):
-- <nếu không rõ thì ghi: "Theo quy định hiện hành.">
-
-6. Link chi tiết thủ tục:
-- <link_chi_tiet_thu_tuc>
-
-7. Mẫu đơn, tờ khai:
-- <ten_mau_1>: <link_mau_1> (nếu có, nếu không thì ghi "Xem mẫu đơn tại link chi tiết thủ tục.")
-
-Cuối cùng, KHÔNG được thêm các đoạn mở đầu/mở kết kiểu "Để làm thủ tục này, bạn cần…" nếu đã nằm trong các mục trên.
-Chỉ trả về nội dung đúng PHOM trên, KHÔNG thêm lời chào hay giải thích thừa.
+Nếu KHÔNG tìm thấy thủ tục phù hợp với câu hỏi, hãy trả lời rất ngắn gọn, đề nghị người dân:
+- Gõ đúng tên thủ tục (vd: "đăng ký khai sinh", "đổi giấy phép lái xe")
+- Hoặc cung cấp nhiều từ khóa hơn để hệ thống tra cứu chính xác.
 `;
 
 // ================== CACHE GOOGLE SHEET ==================
-let cache = null;
+let cacheData = null;
 let lastFetch = 0;
 const CACHE_TTL = 5 * 60 * 1000; // 5 phút
 
 async function loadData() {
+  if (!SHEET_URL) {
+    console.error("Thiếu biến môi trường TTHC_SHEET_URL");
+    return [];
+  }
+
   const now = Date.now();
-  if (cache && now - lastFetch < CACHE_TTL) return cache;
+  if (cacheData && now - lastFetch < CACHE_TTL) {
+    return cacheData;
+  }
 
   const res = await fetch(SHEET_URL);
+  if (!res.ok) {
+    console.error("Lỗi tải CSV từ Google Sheet", res.status, res.statusText);
+    return [];
+  }
+
   const csv = await res.text();
-  const lines = csv.split("\n").filter(Boolean);
+  const lines = csv.split("\n").filter((l) => l.trim() !== "");
+  if (lines.length < 2) return [];
 
-  if (!lines.length) return [];
-
-  const header = lines[0].split(",").map((h) => h.trim());
+  const headers = lines[0].split(",").map((h) => h.trim());
   const data = lines.slice(1).map((row) => {
     const cols = row.split(",");
-    const item = {};
-    header.forEach((h, i) => {
-      item[h] = (cols[i] || "").trim();
+    const obj = {};
+    headers.forEach((h, i) => {
+      obj[h] = (cols[i] || "").trim();
     });
-    return item;
+    return obj;
   });
 
-  cache = data;
+  cacheData = data;
   lastFetch = now;
   return data;
 }
 
 // ================== TÌM THỦ TỤC PHÙ HỢP ==================
-function findProcedure(question, data) {
-  if (!question || !data.length) return null;
+function findProcedure(message, data) {
+  if (!message || !data || data.length === 0) return null;
 
-  const q = (question || "").toLowerCase();
+  const text = message.toLowerCase();
 
-  return (
-    data.find((item) => {
-      const ten = (item.ten_thu_tuc || "").toLowerCase();
-      const ma = (item.ma_thu_tuc || "").toLowerCase();
-      const keywords = (item.tu_khoa_tim_kiem || "")
-        .toLowerCase()
-        .split(";")
-        .map((k) => k.trim())
-        .filter(Boolean);
+  let best = null;
+  let bestScore = 0;
 
-      const matchTen = ten && q.includes(ten);
-      const matchMa = ma && q.includes(ma);
-      const matchKeyword = keywords.some((k) => q.includes(k));
+  for (const row of data) {
+    const ten = (row.ten_thu_tuc || "").toLowerCase();
+    const ma = (row.ma_thu_tuc || "").toLowerCase();
+    const tuKhoaRaw = (row.tu_khoa_tim_kiem || "").toLowerCase();
 
-      return matchTen || matchMa || matchKeyword;
-    }) || null
-  );
+    if (!ten && !tuKhoaRaw && !ma) continue;
+
+    let score = 0;
+
+    // trùng tên thủ tục
+    if (ten && text.includes(ten)) score += 5;
+
+    // trùng mã thủ tục
+    if (ma && text.includes(ma)) score += 3;
+
+    // trùng từ khóa
+    const tuKhoaList = tuKhoaRaw
+      .split(/[;,.\/|]/)
+      .map((s) => s.trim())
+      .filter(Boolean);
+
+    for (const kw of tuKhoaList) {
+      if (kw && text.includes(kw)) {
+        score += 2;
+      }
+    }
+
+    if (score > bestScore) {
+      bestScore = score;
+      best = row;
+    }
+  }
+
+  // ngưỡng tối thiểu để coi là "khớp"
+  if (bestScore === 0) return null;
+  return best;
 }
 
-// ================== XÂY CONTEXT TỪ DỮ LIỆU SHEET ==================
-function buildContextFromProcedure(p) {
+// ================== TẠO CONTEXT CHO MODEL ==================
+function buildContextFromRow(row) {
+  if (!row) return "Không tìm thấy dữ liệu thủ tục phù hợp trong bảng.";
+
+  const ma = row.ma_thu_tuc || "";
+  const ten = row.ten_thu_tuc || "";
+  const tuKhoa = row.tu_khoa_tim_kiem || "";
+  const linkThuTuc = row.link_chi_tiet_thu_tuc || "";
+  const tenMau1 = row.ten_mau_1 || "";
+  const linkMau1 = row.link_mau_1 || "";
+  const ghiChu = row.ghi_chu || "";
+
   return `
-ma_thu_tuc: ${p.ma_thu_tuc || ""}
-ten_thu_tuc: ${p.ten_thu_tuc || ""}
-tu_khoa_tim_kiem: ${p.tu_khoa_tim_kiem || ""}
-link_chi_tiet_thu_tuc: ${p.link_chi_tiet_thu_tuc || ""}
-ten_mau_1: ${p.ten_mau_1 || ""}
-link_mau_1: ${p.link_mau_1 || ""}
-ghi_chu: ${p.ghi_chu || ""}
-`.trim();
+Dữ liệu thủ tục lấy từ Google Sheet (KHÔNG ĐƯỢC BỊA THÊM):
+
+- Mã thủ tục: ${ma}
+- Tên thủ tục: ${ten}
+- Từ khóa tìm kiếm: ${tuKhoa}
+- Link chi tiết thủ tục: ${linkThuTuc || "chưa có trong sheet"}
+- Mẫu 1: ${tenMau1 || "không có dữ liệu"}
+- Link mẫu 1: ${linkMau1 || "không có dữ liệu"}
+- Ghi chú: ${ghiChu || "không có"}
+
+Hãy dùng PHOM TRẢ LỜI để trả lời ngắn gọn cho người dân.
+`;
 }
 
-// ================== API HANDLER CHO VERCEL ==================
+// ================== HANDLER CHÍNH (Vercel API) ==================
 export default async function handler(req, res) {
-  // CORS
+  // CORS đơn giản
   res.setHeader("Access-Control-Allow-Origin", "*");
   res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
   res.setHeader("Access-Control-Allow-Headers", "Content-Type");
@@ -133,61 +173,59 @@ export default async function handler(req, res) {
   }
 
   if (req.method !== "POST") {
-    return res.status(405).json({ error: "Only POST allowed" });
+    return res.status(405).json({ error: "Chỉ hỗ trợ phương thức POST" });
   }
 
   try {
     const { message } = req.body || {};
-
-    if (!message) {
-      return res.status(400).json({ error: "Missing 'message' field" });
+    if (!message || typeof message !== "string") {
+      return res.status(400).json({ error: "Thiếu 'message' trong body" });
     }
 
-    // 1. Load dữ liệu TTHC từ Google Sheet
-    const dataset = await loadData();
+    // 1. Load dữ liệu thủ tục từ Google Sheet
+    const data = await loadData();
 
-    // 2. Tìm thủ tục phù hợp với câu hỏi
-    const matched = findProcedure(message, dataset);
+    // 2. Tìm thủ tục phù hợp
+    const matched = findProcedure(message, data);
 
-    // 2.1. Nếu không tìm thấy → KHÔNG ĐƯỢC BỊA
+    // Nếu không tìm thấy -> trả lời tay, không cần gọi OpenAI
     if (!matched) {
       return res.status(200).json({
         answer:
-          "Hiện tôi chưa tìm thấy thủ tục phù hợp trong dữ liệu đã được cung cấp. " +
-          "Bạn vui lòng gửi thêm mã thủ tục hoặc link thủ tục trên Cổng Dịch vụ công để tôi hỗ trợ chính xác.",
+          `Em chưa tìm được thủ tục phù hợp với câu hỏi của anh/chị.\n\n` +
+          `Anh/chị vui lòng:\n` +
+          `- Gõ rõ tên thủ tục (vd: "đăng ký khai sinh", "đổi giấy phép lái xe")\n` +
+          `- Hoặc thêm vài từ khóa cụ thể hơn để hệ thống tra cứu chính xác.\n\n` +
+          `Hoặc truy cập Cổng dịch vụ công để tra cứu trực tiếp.`,
       });
     }
 
-    // 3. Build context cho AI từ dòng thủ tục
-    const ctx = buildContextFromProcedure(matched);
+    const context = buildContextFromRow(matched);
 
-    // 4. Gọi OpenAI với SYSTEM_PROMPT + CONTEXT
+    // 3. Gọi OpenAI tạo câu trả lời NGẮN GỌN THEO PHOM
     const completion = await client.chat.completions.create({
       model: "gpt-4.1-mini",
-      max_tokens: 450, // giới hạn độ dài
       messages: [
         { role: "system", content: SYSTEM_PROMPT },
         {
-          role: "system",
-          content:
-            "Dữ liệu thủ tục được trích từ Google Sheet của " +
-            TEN_XA +
-            " như sau:\n" +
-            ctx,
-        },
-        {
           role: "user",
           content:
-            "Hãy trả lời hướng dẫn thủ tục cho người dân theo đúng PHOM quy định, thật ngắn gọn, rõ ràng.",
+            `Đây là câu hỏi của người dân: """${message}""" ` +
+            `\n\nĐây là dữ liệu thủ tục khớp nhất trong bảng:\n${context}\n\n` +
+            `Hãy trả lời đúng theo PHOM, ngắn gọn, không vượt quá khoảng 200–250 từ.`,
         },
       ],
+      temperature: 0.2,
+      max_tokens: 400,
     });
 
-    const answer = completion.choices[0]?.message?.content || "";
+    const answer = completion.choices[0]?.message?.content?.trim() || "";
 
     return res.status(200).json({ answer });
   } catch (err) {
-    console.error("AI server error:", err);
-    return res.status(500).json({ error: "Internal server error" });
+    console.error("Lỗi handler:", err);
+    return res.status(500).json({
+      error: "Đã xảy ra lỗi khi xử lý yêu cầu. Vui lòng thử lại sau.",
+    });
   }
 }
