@@ -7,7 +7,7 @@ const client = new OpenAI({
 
 // ================== ENV (ĐA XÃ) ==================
 const SHEET_URL = process.env.TTHC_SHEET_URL;
-const TEN_XA = process.env.TEN_XA || "Xã Xuan Lũng";
+const TEN_XA = process.env.TEN_XA || "Xã Liên Châu";
 const TEN_TINH = process.env.TEN_TINH || "Phú Thọ";
 
 // ================== BỘ NÃO PRO ==================
